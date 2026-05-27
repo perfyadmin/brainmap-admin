@@ -268,7 +268,7 @@ function howMeasuredBox(doc, howWeMeasure, howWeGot, y, color = TEAL) {
   return y + boxH + 4;
 }
 
-export function generateDeepReport(user, results) {
+export function generateDeepReport(user, results, profilePhoto) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pw = doc.internal.pageSize.getWidth();
 
@@ -310,15 +310,41 @@ export function generateDeepReport(user, results) {
   doc.text("PERSONALITY & PERFORMANCE", pw / 2, 90, { align: "center" });
   doc.text("DEEP INTERPRETATION REPORT", pw / 2, 100, { align: "center" });
 
+  // DRAW PROFILE PHOTO & COVER TEXTS
+  let nameY = 125;
+  let typeY = 135;
+  let extrasY = 143;
+  let dateY = 160;
+
+  if (profilePhoto) {
+    try {
+      // Sleek rounded rectangle border for profile image
+      doc.setDrawColor(255, 255, 255); doc.setLineWidth(1.2);
+      doc.roundedRect(pw / 2 - 14, 105, 28, 28, 3, 3, "D");
+      
+      // Embed image
+      doc.addImage(profilePhoto, "JPEG", pw / 2 - 13, 106, 26, 26);
+      
+      // Shift text coordinates
+      nameY = 142;
+      typeY = 150;
+      extrasY = 157;
+      dateY = 167;
+    } catch (e) {
+      console.error("Error drawing profile photo on cover page:", e);
+    }
+  }
+
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(14); doc.setFont("helvetica", "normal");
-  doc.text(user.name.toUpperCase(), pw / 2, 125, { align: "center" });
+  doc.text(user.name.toUpperCase(), pw / 2, nameY, { align: "center" });
   doc.setFontSize(11);
-  doc.text(`Profile Type: ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`, pw / 2, 135, { align: "center" });
+  doc.text(`Profile Type: ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`, pw / 2, typeY, { align: "center" });
   const extras = [user.companyName, user.department, user.school].filter(Boolean);
-  if (extras.length) doc.text(extras.join("  |  "), pw / 2, 143, { align: "center" });
+  if (extras.length) doc.text(extras.join("  |  "), pw / 2, extrasY, { align: "center" });
 
   doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, pw / 2, 160, { align: "center" });
+  doc.text(`Generated: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, pw / 2, dateY, { align: "center" });
 
   // Quotient gauges on cover — evenly distributed across the printable width.
   const gaugeY = 188;
@@ -329,6 +355,8 @@ export function generateDeepReport(user, results) {
     drawGauge(doc, gx, gaugeY, 13, s.val, s.name.split("(")[0].trim(), gaugeColors[i]);
   });
 
+  // Make text white on cover page (drawGauge overrides it)
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   const quickStats = [
     `DISC: ${discKey} (${birdName})`, `MBTI: ${results.mbti.type}`,

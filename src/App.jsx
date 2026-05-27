@@ -167,7 +167,8 @@ export default function App() {
 
       setUsers(usersData);
       setResults(resultsData);
-      setCompanies(companiesData);
+      const actualCompanies = (companiesData || []).filter(c => c && c.code && c.id !== 'upi_config' && c.type !== 'discount');
+      setCompanies(actualCompanies);
       setUpiConfig(upiData);
       setAdminUpiInput(upiData.upiId || "");
       setDiscountCodes(discountsData);
@@ -461,8 +462,30 @@ export default function App() {
     }
   };
 
+  // Preloads a remote S3 image URL and converts it to base64 synchronously for jsPDF
+  const preloadImageToBase64 = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL("image/jpeg"));
+        } else {
+          reject(new Error("Failed to get 2D canvas context"));
+        }
+      };
+      img.onerror = (e) => reject(new Error("Failed to load image: " + e));
+      img.src = url;
+    });
+  };
+
   // Dynamically compile and trigger 20-page Detailed PDF report download
-  const handleDownloadUserPDF = (targetUser) => {
+  const handleDownloadUserPDF = async (targetUser) => {
     const userResult = results.find(r => r.email === targetUser.email);
     if (!userResult) {
       alert("Responses not found for this user.");
@@ -477,7 +500,16 @@ export default function App() {
         school: targetUser.school || ""
       };
       
-      generateDeepReport(fullUser, calc);
+      let photoBase64 = undefined;
+      if (userResult.profilePhotoUrl) {
+        try {
+          photoBase64 = await preloadImageToBase64(userResult.profilePhotoUrl);
+        } catch (e) {
+          console.error("Failed to preload remote profile photo:", e);
+        }
+      }
+
+      generateDeepReport(fullUser, calc, photoBase64);
     } catch (err) {
       console.error(err);
       alert("Error generating user's detailed PDF report.");
@@ -579,7 +611,7 @@ export default function App() {
   // Helpers
   const getCompanyName = (code) => {
     if (!code) return "—";
-    const comp = companies.find(c => c.code.toUpperCase() === code.toUpperCase());
+    const comp = companies.find(c => c && c.code && c.code.toUpperCase() === code.toUpperCase());
     return comp ? comp.name : code;
   };
 
