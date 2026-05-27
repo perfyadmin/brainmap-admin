@@ -1274,6 +1274,11 @@ export default function App() {
                             <td>
                               <div style={{ fontWeight: "600" }}>{pay.name}</div>
                               <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{pay.email}</div>
+                              {pay.selectedPlan && (
+                                <div style={{ fontSize: "0.7rem", color: "var(--primary)", marginTop: "2px", fontWeight: "600" }}>
+                                  📦 {pay.selectedPlan} {pay.payableAmount ? `(₹${pay.payableAmount})` : ''}
+                                </div>
+                              )}
                             </td>
                             <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
                               {pay.paymentSubmittedAt ? new Date(pay.paymentSubmittedAt).toLocaleString() : "N/A"}
@@ -1675,6 +1680,21 @@ export default function App() {
                     {selectedPayment.school && <div>🏫 School: <strong style={{ color: "var(--text-primary)" }}>{selectedPayment.school}</strong></div>}
                     <div>⏳ Submitted At: <strong style={{ color: "var(--text-primary)" }}>{new Date(selectedPayment.paymentSubmittedAt).toLocaleString()}</strong></div>
                     <div>📅 Completed Test: <strong style={{ color: "var(--text-primary)" }}>{new Date(selectedPayment.completedAt).toLocaleString()}</strong></div>
+                    
+                    {/* Selected Plan, Add-ons, and Payable Amount */}
+                    {selectedPayment.selectedPlan && (
+                      <div style={{ marginTop: "4px", borderTop: "1px dashed var(--border)", paddingTop: "8px" }}>
+                        📦 Selected Plan: <strong style={{ color: "var(--primary)" }}>{selectedPayment.selectedPlan}</strong>
+                      </div>
+                    )}
+                    {selectedPayment.selectedAddons && (
+                      <div>🧩 Add-ons: <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>{selectedPayment.selectedAddons}</span></div>
+                    )}
+                    {selectedPayment.payableAmount !== undefined && (
+                      <div style={{ marginTop: "6px", padding: "8px 12px", background: "rgba(139, 92, 246, 0.1)", border: "1px dashed rgba(139, 92, 246, 0.3)", borderRadius: "8px" }}>
+                        💰 Payable Amount: <strong style={{ color: "var(--primary)", fontSize: "1.05rem" }}>₹{selectedPayment.payableAmount}</strong>
+                      </div>
+                    )}
                   </div>
                 </div>
 
