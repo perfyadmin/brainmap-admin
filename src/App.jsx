@@ -48,6 +48,7 @@ export default function App() {
   const [discountCodes, setDiscountCodes] = useState([]);
   const [newDiscountCode, setNewDiscountCode] = useState("");
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [selectedPayment, setSelectedPayment] = useState(null); // Review modal
   const [submittingUpi, setSubmittingUpi] = useState(false);
   const [generatingCode, setGeneratingCode] = useState(false);
@@ -130,6 +131,7 @@ export default function App() {
     setAdminUpiInput("");
     setDiscountCodes([]);
     setPendingPayments([]);
+    setFeedbacks([]);
     setSelectedPayment(null);
   };
 
@@ -137,16 +139,17 @@ export default function App() {
   const fetchData = async () => {
     if (!token) return;
     try {
-      const [usersRes, resultsRes, companiesRes, upiRes, discountsRes, pendingRes] = await Promise.all([
+      const [usersRes, resultsRes, companiesRes, upiRes, discountsRes, pendingRes, feedbacksRes] = await Promise.all([
         fetch(`${API_BASE_URL}/admin/users`, { headers: getHeaders() }),
         fetch(`${API_BASE_URL}/admin/results`, { headers: getHeaders() }),
         fetch(`${API_BASE_URL}/admin/companies`, { headers: getHeaders() }),
         fetch(`${API_BASE_URL}/admin/upi-config`, { headers: getHeaders() }),
         fetch(`${API_BASE_URL}/admin/discount-codes`, { headers: getHeaders() }),
-        fetch(`${API_BASE_URL}/admin/pending-payments`, { headers: getHeaders() })
+        fetch(`${API_BASE_URL}/admin/pending-payments`, { headers: getHeaders() }),
+        fetch(`${API_BASE_URL}/admin/feedbacks`, { headers: getHeaders() })
       ]);
 
-      if (!usersRes.ok || !resultsRes.ok || !companiesRes.ok || !upiRes.ok || !discountsRes.ok || !pendingRes.ok) {
+      if (!usersRes.ok || !resultsRes.ok || !companiesRes.ok || !upiRes.ok || !discountsRes.ok || !pendingRes.ok || !feedbacksRes.ok) {
         if (usersRes.status === 401 || resultsRes.status === 401) {
           handleLogout();
           return;
@@ -160,6 +163,7 @@ export default function App() {
       const upiData = await upiRes.json();
       const discountsData = await discountsRes.json();
       const pendingData = await pendingRes.json();
+      const feedbacksData = await feedbacksRes.json();
 
       setUsers(usersData);
       setResults(resultsData);
@@ -168,6 +172,7 @@ export default function App() {
       setAdminUpiInput(upiData.upiId || "");
       setDiscountCodes(discountsData);
       setPendingPayments(pendingData);
+      setFeedbacks(feedbacksData);
 
       calculateAnalytics(usersData, resultsData);
     } catch (err) {
@@ -1084,176 +1089,300 @@ export default function App() {
 
         {/* PAYMENTS & DISCOUNT CODES TAB */}
         {activeTab === "payments" && (
-          <div className="fade-in" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
+          <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             
-            {/* Left Side: UPI Settings & Discount Codes */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* Upper Config & Review Section */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
               
-              {/* UPI Settings Card */}
-              <div className="glass-panel" style={{ padding: "24px" }}>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-                  UPI Payment Settings
-                </h3>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                  Configure the target UPI ID where users will send report payments. The user portal dynamically generates a payment QR code using this address.
-                </p>
-                <form onSubmit={handleSaveUpi} style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
-                  <div className="form-group" style={{ flex: "1" }}>
-                    <label className="form-label">Active UPI Address</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. perfy@ybl, perfy.pay@okhdfcbank"
-                      value={adminUpiInput}
-                      onChange={e => setAdminUpiInput(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <button type="submit" disabled={submittingUpi} className="btn btn-primary" style={{ padding: "10px 20px" }}>
-                    {submittingUpi ? "Saving..." : "Save ID"}
-                  </button>
-                </form>
-                {upiConfig && upiConfig.updatedAt && (
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", display: "block", marginTop: "8px" }}>
-                    Last updated: {new Date(upiConfig.updatedAt).toLocaleString()}
-                  </span>
-                )}
-              </div>
-
-              {/* Discount Code Generator & Manager */}
-              <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <h3 style={{ fontSize: "1.2rem", fontWeight: "700", borderBottom: "1px solid var(--border)", paddingBottom: "8px", margin: "0" }}>
-                  Single-Use Discount Codes
-                </h3>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0" }}>
-                  Generate unique, single-use codes. When entered by users, the report unlocks immediately for free. The code is auto-deleted from the database once used.
-                </p>
-
-                <form onSubmit={handleCreateDiscountCode} style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
-                  <div className="form-group" style={{ flex: "1" }}>
-                    <label className="form-label">New Discount Code</label>
-                    <div style={{ display: "flex", gap: "8px" }}>
+              {/* Left Side: UPI Settings & Discount Codes */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                
+                {/* UPI Settings Card */}
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
+                    UPI Payment Settings
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
+                    Configure the target UPI ID where users will send report payments. The user portal dynamically generates a payment QR code using this address.
+                  </p>
+                  <form onSubmit={handleSaveUpi} style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+                    <div className="form-group" style={{ flex: "1" }}>
+                      <label className="form-label">Active UPI Address</label>
                       <input
                         type="text"
                         className="form-input"
-                        style={{ textTransform: "uppercase", fontFamily: "monospace", fontWeight: "700" }}
-                        placeholder="e.g. FREE100"
-                        value={newDiscountCode}
-                        onChange={e => setNewDiscountCode(e.target.value)}
+                        placeholder="e.g. perfy@ybl, perfy.pay@okhdfcbank"
+                        value={adminUpiInput}
+                        onChange={e => setAdminUpiInput(e.target.value)}
                         required
                       />
-                      <button 
-                        type="button" 
-                        onClick={handleAutoGenerateDiscountCode} 
-                        className="btn btn-secondary btn-icon" 
-                        title="Auto-Generate Random Code"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
                     </div>
-                  </div>
-                  <button type="submit" disabled={generatingCode} className="btn btn-primary" style={{ padding: "10px 16px" }}>
-                    {generatingCode ? "Creating..." : "Register"}
-                  </button>
-                </form>
-
-                {/* Active codes table */}
-                <div style={{ marginTop: "10px" }}>
-                  <h4 style={{ fontSize: "0.9rem", fontWeight: "600", marginBottom: "8px" }}>Active Codes ({discountCodes.length})</h4>
-                  <div className="table-container" style={{ maxHeight: "250px", overflowY: "auto" }}>
-                    <table className="data-table" style={{ fontSize: "0.85rem" }}>
-                      <thead>
-                        <tr>
-                          <th>Code</th>
-                          <th>Created At</th>
-                          <th style={{ textAlign: "right" }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {discountCodes.length === 0 ? (
-                          <tr>
-                            <td colSpan="3" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
-                              No active codes. Create one above!
-                            </td>
-                          </tr>
-                        ) : (
-                          discountCodes.map(codeItem => (
-                            <tr key={codeItem.id}>
-                              <td style={{ fontFamily: "monospace", fontWeight: "700", color: "var(--primary)" }}>{codeItem.code}</td>
-                              <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
-                                {new Date(codeItem.createdAt).toLocaleString()}
-                              </td>
-                              <td style={{ textAlign: "right" }}>
-                                <button 
-                                  onClick={() => handleDeleteDiscountCode(codeItem.code)} 
-                                  className="btn btn-secondary btn-icon" 
-                                  style={{ color: "var(--error)", padding: "4px" }} 
-                                  title="Delete Code"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                    <button type="submit" disabled={submittingUpi} className="btn btn-primary" style={{ padding: "10px 20px" }}>
+                      {submittingUpi ? "Saving..." : "Save ID"}
+                    </button>
+                  </form>
+                  {upiConfig && upiConfig.updatedAt && (
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", display: "block", marginTop: "8px" }}>
+                      Last updated: {new Date(upiConfig.updatedAt).toLocaleString()}
+                    </span>
+                  )}
                 </div>
 
+                {/* Discount Code Generator & Manager */}
+                <div className="glass-panel" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: "700", borderBottom: "1px solid var(--border)", paddingBottom: "8px", margin: "0" }}>
+                    Single-Use Discount Codes
+                  </h3>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0" }}>
+                    Generate unique, single-use codes. When entered by users, the report unlocks immediately for free. The code is auto-deleted from the database once used.
+                  </p>
+
+                  <form onSubmit={handleCreateDiscountCode} style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+                    <div className="form-group" style={{ flex: "1" }}>
+                      <label className="form-label">New Discount Code</label>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ textTransform: "uppercase", fontFamily: "monospace", fontWeight: "700" }}
+                          placeholder="e.g. FREE100"
+                          value={newDiscountCode}
+                          onChange={e => setNewDiscountCode(e.target.value)}
+                          required
+                        />
+                        <button 
+                          type="button" 
+                          onClick={handleAutoGenerateDiscountCode} 
+                          className="btn btn-secondary btn-icon" 
+                          title="Auto-Generate Random Code"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <button type="submit" disabled={generatingCode} className="btn btn-primary" style={{ padding: "10px 16px" }}>
+                      {generatingCode ? "Creating..." : "Register"}
+                    </button>
+                  </form>
+
+                  {/* Active codes table */}
+                  <div style={{ marginTop: "10px" }}>
+                    <h4 style={{ fontSize: "0.9rem", fontWeight: "600", marginBottom: "8px" }}>Active Codes ({discountCodes.length})</h4>
+                    <div className="table-container" style={{ maxHeight: "250px", overflowY: "auto" }}>
+                      <table className="data-table" style={{ fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr>
+                            <th>Code</th>
+                            <th>Created At</th>
+                            <th style={{ textAlign: "right" }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {discountCodes.length === 0 ? (
+                            <tr>
+                              <td colSpan="3" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "20px" }}>
+                                No active codes. Create one above!
+                              </td>
+                            </tr>
+                          ) : (
+                            discountCodes.map(codeItem => (
+                              <tr key={codeItem.id}>
+                                <td style={{ fontFamily: "monospace", fontWeight: "700", color: "var(--primary)" }}>{codeItem.code}</td>
+                                <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
+                                  {new Date(codeItem.createdAt).toLocaleString()}
+                                </td>
+                                <td style={{ textAlign: "right" }}>
+                                  <button 
+                                    onClick={() => handleDeleteDiscountCode(codeItem.code)} 
+                                    className="btn btn-secondary btn-icon" 
+                                    style={{ color: "var(--error)", padding: "4px" }} 
+                                    title="Delete Code"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-            </div>
 
-            {/* Right Side: Pending Payments review list */}
-            <div className="glass-panel" style={{ padding: "24px" }}>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-                Pending Payment Verifications ({pendingPayments.length})
-              </h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                Review user UPI payment submissions. Click the eye icon to verify screenshot receipts and approve or reject access.
-              </p>
+              {/* Right Side: Pending Payments review list */}
+              <div className="glass-panel" style={{ padding: "24px" }}>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
+                  Pending Payment Verifications ({pendingPayments.length})
+                </h3>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
+                  Review user UPI payment submissions. Click the eye icon to verify screenshot receipts and approve or reject access.
+                </p>
 
-              <div className="table-container" style={{ maxHeight: "560px", overflowY: "auto" }}>
-                <table className="data-table" style={{ fontSize: "0.85rem" }}>
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Submitted</th>
-                      <th style={{ textAlign: "right" }}>Review</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingPayments.length === 0 ? (
+                <div className="table-container" style={{ maxHeight: "560px", overflowY: "auto" }}>
+                  <table className="data-table" style={{ fontSize: "0.85rem" }}>
+                    <thead>
                       <tr>
-                        <td colSpan="3" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "40px" }}>
-                          No pending payments to review. All caught up! 🎉
-                        </td>
+                        <th>User</th>
+                        <th>Submitted</th>
+                        <th style={{ textAlign: "right" }}>Review</th>
                       </tr>
-                    ) : (
-                      pendingPayments.map(pay => (
-                        <tr key={pay.email}>
-                          <td>
-                            <div style={{ fontWeight: "600" }}>{pay.name}</div>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{pay.email}</div>
-                          </td>
-                          <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
-                            {pay.paymentSubmittedAt ? new Date(pay.paymentSubmittedAt).toLocaleString() : "N/A"}
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            <button 
-                              onClick={() => setSelectedPayment(pay)} 
-                              className="btn btn-primary btn-icon" 
-                              title="Review Screenshot"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                    </thead>
+                    <tbody>
+                      {pendingPayments.length === 0 ? (
+                        <tr>
+                          <td colSpan="3" style={{ textAlign: "center", color: "var(--text-secondary)", padding: "40px" }}>
+                            No pending payments to review. All caught up! 🎉
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        pendingPayments.map(pay => (
+                          <tr key={pay.email}>
+                            <td>
+                              <div style={{ fontWeight: "600" }}>{pay.name}</div>
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{pay.email}</div>
+                            </td>
+                            <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
+                              {pay.paymentSubmittedAt ? new Date(pay.paymentSubmittedAt).toLocaleString() : "N/A"}
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <button 
+                                onClick={() => setSelectedPayment(pay)} 
+                                className="btn btn-primary btn-icon" 
+                                title="Review Screenshot"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+
+            </div>
+
+            {/* Bottom Row: User Testimonials & Feedback Grid */}
+            <div className="glass-panel" style={{ padding: "24px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "700", marginBottom: "16px", borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
+                User Testimonials &amp; Feedbacks ({feedbacks.length})
+              </h3>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                Browse reviews, ratings, and optional S3-hosted video testimonials submitted by users before their report summary download.
+              </p>
+
+              {feedbacks.length === 0 ? (
+                <div style={{ padding: "40px", textAlignment: "center", color: "var(--text-secondary)", border: "1px dashed var(--border)", borderRadius: "12px", background: "rgba(255,255,255,0.01)" }}>
+                  No testimonials submitted yet. Completed users will provide ratings and video comments here.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+                  {feedbacks.map((feed) => (
+                    <div 
+                      key={feed.email} 
+                      className="fade-in"
+                      style={{ 
+                        background: "rgba(255, 255, 255, 0.02)", 
+                        border: "1px solid var(--border)", 
+                        borderRadius: "12px", 
+                        padding: "16px", 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        gap: "12px" 
+                      }}
+                    >
+                      {/* Top Header Row of card */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
+                        <div>
+                          <strong style={{ display: "block", fontSize: "0.95rem" }}>{feed.name}</strong>
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", wordBreak: "break-all" }}>{feed.email}</span>
+                        </div>
+                        <span className={`badge badge-${feed.role || "student"}`} style={{ fontSize: "0.7rem", padding: "2px 6px" }}>
+                          {feed.role || "Student"}
+                        </span>
+                      </div>
+
+                      {/* Corporate / School Context and Date */}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                        <span>
+                          🏫 {feed.companyCode ? getCompanyName(feed.companyCode) : feed.school || "Individual"}
+                        </span>
+                        <span>
+                          {feed.feedbackSubmittedAt ? new Date(feed.feedbackSubmittedAt).toLocaleDateString() : ""}
+                        </span>
+                      </div>
+
+                      {/* Visual Rating Star component */}
+                      <div style={{ display: "flex", gap: "2px" }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span 
+                            key={star} 
+                            style={{ 
+                              color: star <= (feed.feedbackRating || feed.rating || 5) ? "#fbbf24" : "var(--border)", 
+                              fontSize: "1.2rem",
+                              lineHeight: "1" 
+                            }}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Comments content */}
+                      {(feed.feedbackComments || feed.textFeedback) ? (
+                        <div 
+                          style={{ 
+                            fontSize: "0.85rem", 
+                            color: "var(--text-secondary)", 
+                            fontStyle: "italic", 
+                            background: "rgba(0,0,0,0.1)", 
+                            padding: "10px", 
+                            borderRadius: "8px", 
+                            borderLeft: "3px solid var(--primary)",
+                            whiteSpace: "pre-wrap"
+                          }}
+                        >
+                          "{feed.feedbackComments || feed.textFeedback}"
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                          No written feedback provided.
+                        </span>
+                      )}
+
+                      {/* Native HTML5 Video Testimonial from S3 */}
+                      {feed.videoTestimonialUrl ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--secondary)" }}>
+                            📹 Video Testimonial
+                          </span>
+                          <video 
+                            src={feed.videoTestimonialUrl} 
+                            controls 
+                            preload="none" 
+                            style={{ 
+                              width: "100%", 
+                              maxHeight: "180px", 
+                              borderRadius: "8px", 
+                              border: "1px solid var(--border)", 
+                              background: "rgba(0,0,0,0.3)",
+                              objectFit: "contain" 
+                            }} 
+                          />
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontStyle: "italic" }}>
+                          No video testimonial uploaded.
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
