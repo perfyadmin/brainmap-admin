@@ -779,9 +779,9 @@ export default function App() {
           <button onClick={() => setActiveTab("users")} className={`tab-trigger ${activeTab === "users" ? "active" : ""}`}>
             <Users className="w-4 h-4" /> Registered Users
           </button>
-          <button onClick={() => setActiveTab("companies")} className={`tab-trigger ${activeTab === "companies" ? "active" : ""}`}>
+          {/* <button onClick={() => setActiveTab("companies")} className={`tab-trigger ${activeTab === "companies" ? "active" : ""}`}>
             <Building2 className="w-4 h-4" /> Company Management
-          </button>
+          </button> */}
           <button onClick={() => setActiveTab("payments")} className={`tab-trigger ${activeTab === "payments" ? "active" : ""}`}>
             <FileDown className="w-4 h-4" /> Payments &amp; Codes
           </button>
@@ -1054,7 +1054,7 @@ export default function App() {
         )}
 
         {/* COMPANIES TAB */}
-        {activeTab === "companies" && (
+        {/* {activeTab === "companies" && (
           <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h2 style={{ fontSize: "1.4rem" }}>Corporate Partnerships</h2>
@@ -1063,7 +1063,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Grid of companies */}
             <div className="companies-grid">
               {companies.length === 0 ? (
                 <div className="glass-panel" style={{ padding: "40px", gridColumn: "span 3", textAlignment: "center", color: "var(--text-secondary)" }}>
@@ -1117,7 +1116,7 @@ export default function App() {
               )}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* PAYMENTS & DISCOUNT CODES TAB */}
         {activeTab === "payments" && (
